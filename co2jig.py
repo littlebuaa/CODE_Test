@@ -14,6 +14,7 @@ import datetime
 import re
 import sys
 import csv
+import io
 
 # Version 1 :
 #   - 1st version, used for NPI
@@ -115,20 +116,17 @@ class RelayBoard:
 	def __init__(self, ftdi_sn = None):
 		if (ftdi_sn == None):
 			# Find the FTDI of the relay board automatically
-			dev_list = pylibftdi.Driver().list_devices()
-			for dev in dev_list:
-				print(dev)
-			
+			dev_list = pylibftdi.Driver().list_devices()			
 			if len(dev_list) != 1:
 				# Found none or more than 1 device matching...
 				raise ValueError('Found %d relay board(s)' % len(dev_list))
-			ftdi_sn = bytes.decode(dev_list[0][2])
-			print("----------",ftdi_sn,"--------")
+			ftdi_sn = bytes.decode(dev_list[0][2]) 
+			# or "ftdi_sn = dev_list[0][2].decode()" 
+			
 		logger.info("Open relayboard device S/N <%s>" % ftdi_sn)
 		self.__ftdi = pylibftdi.BitBangDevice(ftdi_sn)
 		self.__ftdi.direction = 0xFF		# All I/O are outputs
-		#self.__ftdi.port = 0x00		# All relay OFF
-		
+		#self.__ftdi.port = 0x00		# All relay OFF		
 
 	def setRelay(self, relay, on):
 		state = "On" if on else "Off"
@@ -289,7 +287,8 @@ class Dut:
 
 	def log(self, uart_bytes):
 		# Strip "\n" to avoid "doubled" carriage returns
-		stripped_uart_bytes = uart_bytes.replace('\n', '')
+		# For Bytes type, must add [b'']
+		stripped_uart_bytes = uart_bytes.replace(b'\n', b'')
 		if(self.__logfile):
 			self.__logfile.write(stripped_uart_bytes)
 		else:
@@ -347,7 +346,7 @@ class Dut:
 	def close(self):
 		if self.__uart.isOpen():
 			self.__uart.close()
-		if type(self.__logfile) is file:
+		if type(self.__logfile) is io._io.BufferedReader:
 			if not self.__logfile.closed:
 				self.__logfile.close()
 	
@@ -361,7 +360,7 @@ class Dut:
 		# Workaround : the byte should be sent slowly...
 		#self.__uart.write("%s\r" % cmd)
 		for byte in cmd + '\r':
-			self.__uart.write(byte)
+			self.__uart.write(byte.encode())
 			sleep(0.001)
 	
 	def getResult(self, timeout_ms):
@@ -378,7 +377,7 @@ class Dut:
 			# Do we need to decode/encode !?
 			# Replace non-ascii characters with '?' because we sometimes receive - because of a bad uart connection ? -
 			# non-ascii characters from the DUT
-			text += chunk.decode('ascii', 'replace').encode('ascii', 'replace')
+			text += chunk.decode('ascii', 'replace')
 			
 			
 			# Display board RX in logs, in "realtime"
@@ -539,7 +538,7 @@ class Co2Meter:
 	__stab_nb_sample_fast = (__sample_rate_hz * 1)	# Last 1 seconds of samples must match the stabilization criteria in fast mode
 	__stab_tol_ratio = (5.0/1000.0)			# last samples must be within +-0.5% of the mean
 	__stab_tol_ppm = 10				# last samples must be within +-10 ppm
-	def __init__(self, uart_name = 'com100'):
+	def __init__(self, uart_name = 'COM100'):
 		self.__uart = serial.Serial()
 		self.__uart.setPort(uart_name)
 		self.__uart.setBaudrate(9600)
@@ -567,7 +566,7 @@ class Co2Meter:
 	def log(self, uart_bytes):
 		# Strip "\n" to avoid "doubled" carriage returns
 		stripped_uart_bytes = uart_bytes.replace('\n', '')
-		self.__logfile.write(stripped_uart_bytes)
+		self.__logfile.write(stripped_uart_bytes.encode())
 					
 	def open(self):
 		self.__log_open()
@@ -601,7 +600,7 @@ class Co2Meter:
 			# Do we need to decode/encode !?
 			# Replace non-ascii characters because we sometimes receive - for a yet unknown reason -
 			# non-ascii characters from the CO2 meter
-			text += chunk.decode('ascii', 'replace').encode('ascii', 'replace')
+			text += chunk.decode('ascii', 'replace')
 			
 			#measblock = self.__measblock_re.search(text)
 			# Hack: see comment above "self.__measblock_re" declaration
@@ -954,7 +953,7 @@ class Co2Jig:
 					co2_time = self.__valve_min_time_ms
 				self.injectCO2(co2_time)
 				post_inject_time = time()
-			elif cur_ppm > 0:
+			elif level > 0:   # cur_ppm > 0:
 				# Co2 level too high, inject som No2
 				no2_time = itt.getNo2InjectionTime(cur_ppm, target_ppm)
 				self.injectNO2(no2_time)
@@ -1240,7 +1239,7 @@ class Co2Jig:
 					
 	def saveFactoryReport(self, duts):
 		# Create report file
-		file = open('MAC_CO2_RESULTS.txt', "wb")	# csv module requires "binary" format
+		file = open('MAC_CO2_RESULTS.txt', "w", newline='')	# csv module requires "binary" format (Not any more, for Python3.x ,)
 		report = csv.writer(file, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
 
 		# Write report
@@ -1250,16 +1249,13 @@ class Co2Jig:
 			if not mac:
 				mac = dut.getName()
 			# 2nd Col: Pass/Fail/Untested
-			state = "Fail"
+			state = 'Fail'
 			if dut.getPass() == None:
-				state = "Untested"
+				state = 'Untested'
 			elif dut.getPass():
-				state = "Pass"
+				state = 'Pass'
 			# Append in report
-			report.writerow([
-					mac,
-					state,
-					])
+			report.writerow([mac,state])
 					
 		file.close()
 			
