@@ -101,12 +101,12 @@ class RelayBoard:
 	#__ftdi
 	# Warning: relay 1, 3, 5 toggles at USB enumeration
 	relay_fan_pwr  = Relay(5, "fan_pwr")
-	relay_gas_out  = Relay(6, "gas_out")
+	relay_gas_out  = Relay(1, "gas_out") # 
 	relay_gas_no2  = Relay(7, "gas_no2")
 	relay_gas_co2  = Relay(8, "gas_co2")
 	relay_dut_pwr  = Relay(2, "dut_pwr")
 	relay_pump_pwr = Relay(4, "pump_pwr")
-	relay_gas_air  = Relay(1, "gas_air")
+	relay_gas_air  = Relay(6, "gas_air")
 	relays = (	relay_fan_pwr,
 			relay_gas_out,
 			relay_gas_no2,
@@ -114,7 +114,7 @@ class RelayBoard:
 			relay_dut_pwr,
 			relay_pump_pwr,
 			relay_gas_air)
-
+			
 	def __init__(self, ftdi_sn = None):
 		if (ftdi_sn == None):
 			# Find the FTDI of the relay board automatically
@@ -421,7 +421,8 @@ class DutSetResult:
 		self.cmd_result = cmd_result
 		
 class DutSet:
-	__all_duts = (	Dut("slot1", "com101"),
+	__all_duts = (	
+			Dut("slot1", "com101"),
 			Dut("slot2", "com102"),
 			Dut("slot3", "com103"),
 			Dut("slot4", "com104"),
@@ -886,6 +887,7 @@ class Co2Jig:
 	__dut_stab_time_ms = 60000	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
 	__dilution_threshold = 1500 # threshold for decide using N2 or fresh air
 	
+	
 	def __init__(self):
 		self.__relayboard = RelayBoard()
 		self.__relayboard.disableAllRelays()
@@ -912,12 +914,12 @@ class Co2Jig:
 	
 	def injectAir(self,time_ms):  # when co2ppm > 1500, use air to dilute the co2
 		logger.debug("Inject Air for %d ms", time_ms)
+		relayboard = self.__relayboard
+		relay_air_in = self.__relayboard.relay_gas_air
 		
-		air_in = self.__relayboard.relay_gas_air
-		
-		relayboard.enableRelay(air_in)
+		relayboard.enableRelay(relay_air_in)
 		sleep(time_ms / 1000.0)
-		relayboard.disableRelay(air_in)
+		relayboard.disableRelay(relay_air_in)
 	
 	def injectNO2(self, time_ms):
 		logger.debug("Inject NO2 for %d ms", time_ms)
@@ -1134,7 +1136,7 @@ class Co2Jig:
 		itt = self.__itt
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
-		no2_step_ms = 8000
+		no2_step_ms = 16000
 		co2_ppms = list()
 		no2_ppms = list()
 		
@@ -1197,7 +1199,8 @@ class Co2Jig:
 			logger.info("Co2 precision = %d ms ; NO2 precision = %d ms"
 					% (co2_step_ms, no2_step_ms) )
 			
-			skip_0ppm_init = False
+			'''skip_0ppm_init = False
+			
 			if not skip_0ppm_init:
 				# Initial situation : 0 ppm
 				logger.info("Settle 0ppm...")
@@ -1209,14 +1212,16 @@ class Co2Jig:
 					if cal_dot_0ppm.refCompareTol(ppm) <= 0:
 						break
 			else:
-				ppm = co2meter.read_ppm()
+				ppm = co2meter.read_ppm()'''
+			ppm = co2meter.read_ppm()	
+			
 			
 			# One measure every co2_step_ms, until we reach the highest
 			# ppm we want to calibrate
 			logger.info("Calibrate CO2 injection time...")
 			co2_ppms.append(ppm)
 			ppm = 0
-			while ppm < ppm_upper_target:
+			while ppm < 6000: #ppm_upper_target:
 				self.injectCO2(co2_step_ms)
 				ppm = co2meter.read_ppm()
 				co2_ppms.append(ppm)
@@ -1227,7 +1232,7 @@ class Co2Jig:
 			print("ppm=%d, ppm_lower_target=%d" % (ppm, ppm_lower_target))
 			
 			
-			while ppm > ppm_lower_target:
+			while ppm > 1700:#ppm_lower_target:
 				if(ppm > self.__dilution_threshold):
 					self.injectAir(no2_step_ms)	
 				else:
