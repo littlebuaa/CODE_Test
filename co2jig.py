@@ -692,9 +692,11 @@ class JigITT:
 	def saveToFile(self, filename = 'inject_time_table.dat'):
 		file = open(filename, 'wb')
 		for dot in self.__co2:
-			file.write("co2 %d %d\n" % (dot.time_ms, dot.ppm))
+			string = "co2 %d %d\n" % (dot.time_ms, dot.ppm)
+			file.write(string.encode())
 		for dot in self.__no2:
-			file.write("no2 %d %d\n" % (dot.time_ms, dot.ppm))
+			string = "no2 %d %d\n" % (dot.time_ms, dot.ppm)
+			file.write(string.encode())
 		file.close()
 		logger.info("Saved ITT calibration into file <%s>:" % filename)
 		logger.info("-------------------")
@@ -882,7 +884,7 @@ class Co2Jig:
 	__inject_loop_maxtry = 5	# Allow up to 5 gas injections before considering we can't reach the ppm target
 	__valve_min_time_ms = 200	# Minimum opening time for the valve
 	__dut_stab_time_ms = 60000	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
-	__dilution_threshold = 1500 # threshold for decide using N2 or fresh air
+	__dilution_threshold = 1400 # threshold for decide using N2 or fresh air
 	
 	
 	def __init__(self):
@@ -1134,7 +1136,7 @@ class Co2Jig:
 		itt = self.__itt
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
-		no2_step_ms = 16000
+		no2_step_ms = 8000
 		
 		co2_ppms = list()
 		no2_ppms = list()
@@ -1220,7 +1222,7 @@ class Co2Jig:
 			logger.info("Calibrate CO2 injection time...")
 			co2_ppms.append(ppm)
 			ppm = 0
-			while ppm < 6000: #ppm_upper_target:
+			while ppm < 3000: #ppm_upper_target:
 				self.injectCO2(co2_step_ms)
 				ppm = co2meter.read_ppm()
 				co2_ppms.append(ppm)
@@ -1229,7 +1231,7 @@ class Co2Jig:
 			logger.info("Calibrate NO2 injection time...")
 			no2_ppms.append(ppm)
 			print("ppm=%d, ppm_lower_target=%d" % (ppm, ppm_lower_target))
-			while ppm > 1700: #ppm_lower_target:
+			while ppm > 2000: #ppm_lower_target:
 				if(ppm > self.__dilution_threshold):
 					self.injectAir(no2_step_ms)	
 				else:

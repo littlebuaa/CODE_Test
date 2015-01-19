@@ -1199,7 +1199,8 @@ class Co2Jig:
 			logger.info("Co2 precision = %d ms ; NO2 precision = %d ms"
 					% (co2_step_ms, no2_step_ms) )
 			
-			'''skip_0ppm_init = False
+			'''
+			skip_0ppm_init = False
 			
 			if not skip_0ppm_init:
 				# Initial situation : 0 ppm
@@ -1212,7 +1213,8 @@ class Co2Jig:
 					if cal_dot_0ppm.refCompareTol(ppm) <= 0:
 						break
 			else:
-				ppm = co2meter.read_ppm()'''
+				ppm = co2meter.read_ppm()
+			'''
 			ppm = co2meter.read_ppm()	
 			
 			
