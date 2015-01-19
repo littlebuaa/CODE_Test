@@ -101,7 +101,7 @@ class RelayBoard:
 	#__ftdi
 	# Warning: relay 1, 3, 5 toggles at USB enumeration
 	relay_fan_pwr  = Relay(5, "fan_pwr")
-	relay_gas_out  = Relay(6, "gas_air")
+	relay_gas_air  = Relay(6, "gas_air")
 	relay_gas_no2  = Relay(7, "gas_no2")
 	relay_gas_co2  = Relay(8, "gas_co2")
 	relay_dut_pwr  = Relay(2, "dut_pwr")
@@ -668,29 +668,24 @@ class JigITT:
 		self.__no2 = list()
 		
 	def loadCo2FromRawMeasures(self, co2_ppms, co2_step_ms):
-		'''def compare(a ,b):
-			return cmp(a.ppm, b.ppm)'''
 			
 		self.__co2 = list()
 		for index, ppm in enumerate(co2_ppms):
 			inject_time = index*co2_step_ms
 			dot = ITTDot(inject_time, ppm)
 			self.__co2.append(dot)
-		#self.__co2.sort(compare)
+		
 		self.__co2 = sorted(self.__co2, key = lambda a:a.ppm)
 		logger.debug("Loaded %d Co2 ITT values from raw measures" % len(self.__co2))
 		
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
-		'''def compare(a ,b):
-			# a and b are swapped so that the list is in reverse order
-			return cmp(b.ppm, a.ppm)'''
 			
 		self.__no2 = list()
 		for index, ppm in enumerate(no2_ppms):
 			inject_time = index*no2_step_ms
 			dot = ITTDot(inject_time, ppm)
 			self.__no2.append(dot)
-		#self.__no2.sort(compare)
+		#Sort in reverse order for N2 table
 		self.__no2 = sorted(self.__no2, key = lambda a:a.ppm, reverse=True)
 		logger.debug("Loaded %d No2 ITT values from raw measures" % len(self.__no2))
 		
