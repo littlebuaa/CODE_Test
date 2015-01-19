@@ -1232,7 +1232,7 @@ class Co2Jig:
 			print("ppm=%d, ppm_lower_target=%d" % (ppm, ppm_lower_target))
 			
 			
-			while ppm > 1700:#ppm_lower_target:
+			while ppm > 1700: #ppm_lower_target:
 				if(ppm > self.__dilution_threshold):
 					self.injectAir(no2_step_ms)	
 				else:
