@@ -668,8 +668,8 @@ class JigITT:
 		self.__no2 = list()
 		
 	def loadCo2FromRawMeasures(self, co2_ppms, co2_step_ms):
-		def compare(a ,b):
-			return cmp(a.ppm, b.ppm)
+		'''def compare(a ,b):
+			return cmp(a.ppm, b.ppm)'''
 			
 		self.__co2 = list()
 		for index, ppm in enumerate(co2_ppms):
@@ -681,9 +681,9 @@ class JigITT:
 		logger.debug("Loaded %d Co2 ITT values from raw measures" % len(self.__co2))
 		
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
-		def compare(a ,b):
+		'''def compare(a ,b):
 			# a and b are swapped so that the list is in reverse order
-			return cmp(b.ppm, a.ppm)
+			return cmp(b.ppm, a.ppm)'''
 			
 		self.__no2 = list()
 		for index, ppm in enumerate(no2_ppms):
