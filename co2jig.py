@@ -676,7 +676,8 @@ class JigITT:
 			inject_time = index*co2_step_ms
 			dot = ITTDot(inject_time, ppm)
 			self.__co2.append(dot)
-		self.__co2.sort(compare)
+		#self.__co2.sort(compare)
+		self.__co2 = sorted(self.__co2, key = lambda a:a.ppm)
 		logger.debug("Loaded %d Co2 ITT values from raw measures" % len(self.__co2))
 		
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
@@ -689,7 +690,8 @@ class JigITT:
 			inject_time = index*no2_step_ms
 			dot = ITTDot(inject_time, ppm)
 			self.__no2.append(dot)
-		self.__no2.sort(compare)
+		#self.__no2.sort(compare)
+		self.__no2 = sorted(self.__no2, key = lambda a:a.ppm, reverse=True)
 		logger.debug("Loaded %d No2 ITT values from raw measures" % len(self.__no2))
 		
 	def saveToFile(self, filename = 'inject_time_table.dat'):
