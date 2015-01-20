@@ -249,7 +249,8 @@ class CmdResult:
 		#logger.debug(data)
 		
 		# Parse cmd "rc=xxx"
-		if data.has_key('rc'):
+		#if data.has_key('rc'):
+		if 'rc' in data:
 			rc = int(data['rc'])
 			del data['rc']
 			
@@ -708,7 +709,7 @@ class JigITT:
 		co2 = list()
 		no2 = list()
 		dot_re = re.compile('^(co2|no2) ([0-9]+) ([0-9]+)$')
-		file = open(filename, 'rb')
+		file = open(filename, 'r')
 		for line in file.readlines():
 			res = dot_re.match(line)
 			if not res:
@@ -971,9 +972,9 @@ class Co2Jig:
 				no2_time = itt.getNo2InjectionTime(cur_ppm, target_ppm)
 				#self.injectNO2(no2_time)
 				if(cur_ppm > self.__dilution_threshold):
-					self.injectAir(no2_step_ms)	
+					self.injectAir(no2_time)	
 				else:
-					self.injectNO2(no2_step_ms)
+					self.injectNO2(no2_time)
 				post_inject_time = time()
 
 			cur_ppm = co2meter.read_ppm()
@@ -1136,7 +1137,7 @@ class Co2Jig:
 		itt = self.__itt
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
-		no2_step_ms = 8000
+		no2_step_ms = 20000
 		
 		co2_ppms = list()
 		no2_ppms = list()
@@ -1222,7 +1223,7 @@ class Co2Jig:
 			logger.info("Calibrate CO2 injection time...")
 			co2_ppms.append(ppm)
 			ppm = 0
-			while ppm < 3000: #ppm_upper_target:
+			while ppm < ppm_upper_target:
 				self.injectCO2(co2_step_ms)
 				ppm = co2meter.read_ppm()
 				co2_ppms.append(ppm)
