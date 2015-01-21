@@ -667,6 +667,7 @@ class JigITT:
 	def __init__(self):
 		self.__co2 = list()
 		self.__no2 = list()
+		self.air_Nb = 0
 		
 	def loadCo2FromRawMeasures(self, co2_ppms, co2_step_ms):
 			
@@ -682,8 +683,14 @@ class JigITT:
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
 			
 		self.__no2 = list()
+		air_step_ms = no2_step_ms * 3
+		logger.debug("In all %d Air Injection times" % self.air_Nb )
 		for index, ppm in enumerate(no2_ppms):
-			inject_time = index*no2_step_ms
+			if index <= self.air_Nb:
+				inject_time = index * air_step_ms
+			else:
+				inject_time = self.air_Nb * air_step_ms + (index - self.air_Nb) * no2_step_ms
+			
 			dot = ITTDot(inject_time, ppm)
 			self.__no2.append(dot)
 		#Sort in reverse order for N2 table
@@ -885,7 +892,7 @@ class Co2Jig:
 	__inject_loop_maxtry = 5	# Allow up to 5 gas injections before considering we can't reach the ppm target
 	__valve_min_time_ms = 200	# Minimum opening time for the valve
 	__dut_stab_time_ms = 60000	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
-	__dilution_threshold = 1400 # threshold for decide using N2 or fresh air
+	__dilution_threshold = 1800 # threshold for decide using N2 or fresh air
 	
 	
 	def __init__(self):
@@ -967,12 +974,12 @@ class Co2Jig:
 					co2_time = self.__valve_min_time_ms
 				self.injectCO2(co2_time)
 				post_inject_time = time()
-			elif level > 0:   # cur_ppm > 0:
+			elif level > 0:  
 				# Co2 level too high, inject some No2
 				no2_time = itt.getNo2InjectionTime(cur_ppm, target_ppm)
 				#self.injectNO2(no2_time)
 				if(cur_ppm > self.__dilution_threshold):
-					self.injectAir(no2_time)	
+					self.injectAir(no2_time)
 				else:
 					self.injectNO2(no2_time)
 				post_inject_time = time()
@@ -1137,7 +1144,8 @@ class Co2Jig:
 		itt = self.__itt
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
-		no2_step_ms = 20000
+		no2_step_ms = 8000
+		air_step_ms = no2_step_ms * 3
 		
 		co2_ppms = list()
 		no2_ppms = list()
@@ -1200,7 +1208,7 @@ class Co2Jig:
 					% (ppm_lower_target, cal_dot_maxppm.co2_ppm, ppm_upper_target) )
 			logger.info("Co2 precision = %d ms ; NO2 precision = %d ms"
 					% (co2_step_ms, no2_step_ms) )
-			'''
+			
 			skip_0ppm_init = False
 			if not skip_0ppm_init:
 				# Initial situation : 0 ppm
@@ -1214,9 +1222,9 @@ class Co2Jig:
 						break
 			else:
 				ppm = co2meter.read_ppm()
-			'''
+			
 			#Skip the 0ppm
-			ppm = co2meter.read_ppm()
+			#ppm = co2meter.read_ppm()
 			
 			# One measure every co2_step_ms, until we reach the highest
 			# ppm we want to calibrate
@@ -1232,9 +1240,10 @@ class Co2Jig:
 			logger.info("Calibrate NO2 injection time...")
 			no2_ppms.append(ppm)
 			print("ppm=%d, ppm_lower_target=%d" % (ppm, ppm_lower_target))
-			while ppm > 2000: #ppm_lower_target:
+			while ppm > ppm_lower_target:
 				if(ppm > self.__dilution_threshold):
-					self.injectAir(no2_step_ms)	
+					self.injectAir(air_step_ms)
+					self.__itt.air_Nb += 1
 				else:
 					self.injectNO2(no2_step_ms)
 					
