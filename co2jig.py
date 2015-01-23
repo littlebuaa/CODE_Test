@@ -431,7 +431,7 @@ class DutSet:
 			Dut("slot6", "com106"),
 			Dut("slot7", "com107"),
 			Dut("slot8", "com108"),
-			Dut("slot9", "com109"),
+			#Dut("slot9", "com109"),
 			Dut("slot10", "com110"),
 			Dut("slot11", "com111"),
 			Dut("slot12", "com112"),
@@ -639,9 +639,8 @@ class Co2Meter:
 
 			now_time = time()
 			measblock_elapsed_time = (now_time - measblock_time_start) * 1000
-			#logger.debug("read measure block elapsed time = %d" % measblock_elapsed_time)
-			if measblock_elapsed_time > self.__measblock_timeout_ms:
-				raise ValueError('Co2Meter read measure block timeout')
+			'''if measblock_elapsed_time > self.__measblock_timeout_ms:
+				raise ValueError('Co2Meter read measure block timeout')'''
 			
 			stab_elapsed_time = (now_time - stab_time_start) * 1000
 			#logger.debug("stabilization elapsed time = %d" % stab_elapsed_time)
@@ -744,7 +743,7 @@ class JigITT:
 		co2 = self.__co2
 		def dist_ppm(ppm_a, ppm_b):
 			return abs(ppm_a - ppm_b)
-		
+			
 		# Interpolation of current time
 		idx_a = 0
 		val_a = co2[0].ppm
@@ -761,7 +760,7 @@ class JigITT:
 		else:
 			idx_b = idx_a-1
 			if (idx_b < 0):
-				idx_b = idx_a+1
+				idx_b = idx_a+1	
 		if not idx_a < idx_b:
 			# Swap
 			(idx_a, idx_b) = (idx_b, idx_a)
@@ -784,11 +783,11 @@ class JigITT:
 		if val_a < target_ppm:
 			idx_b = idx_a+1
 			if idx_b >= len(co2):
-				idx_b = idx_a-1
+				idx_b = idx_a-1		
 		else:
 			idx_b = idx_a-1
 			if (idx_b < 0):
-				idx_b = idx_a+1
+				idx_b = idx_a+1	
 		if not idx_a < idx_b:
 			# Swap
 			(idx_a, idx_b) = (idx_b, idx_a)
@@ -822,20 +821,21 @@ class JigITT:
 				idx_a = index
 				val_a = dot.ppm
 		if val_a < current_ppm:
-			idx_b = idx_a+1
-			if idx_b >= len(no2):
-				idx_b = idx_a-1
-		else:
 			idx_b = idx_a-1
 			if (idx_b < 0):
 				idx_b = idx_a+1
+		else:
+			idx_b = idx_a+1
+			if idx_b >= len(no2):
+				idx_b = idx_a-1
+
 		if not idx_a < idx_b:
 			# Swap
 			(idx_a, idx_b) = (idx_b, idx_a)
 			(val_a, val_b) = (val_b, val_a)
 		dot_a = no2[idx_a]
 		dot_b = no2[idx_b]
-		current_time = dot_a.time_ms + (current_ppm - dot_a.ppm) * (float(dot_b.time_ms - dot_a.time_ms) / float(dot_b.ppm - dot_a.ppm))
+		current_time = dot_a.time_ms + (current_ppm - dot_a.ppm) * (float(dot_b.time_ms - dot_a.time_ms) / float(dot_b.ppm - dot_a.ppm))	
 		
 		# Interpolation of target time
 		# TODO: hey ! this is a nice copy/paste of above...
@@ -850,13 +850,15 @@ class JigITT:
 				val_a = dot.ppm
 		#print "closest idx for %d ppm: %d" % (target_ppm, idx_a)
 		if val_a < target_ppm:
-			idx_b = idx_a+1
-			if idx_b >= len(no2):
-				idx_b = idx_a-1
-		else:
 			idx_b = idx_a-1
 			if (idx_b < 0):
 				idx_b = idx_a+1
+
+		else:
+			idx_b = idx_a+1
+			if idx_b >= len(no2):
+				idx_b = idx_a-1
+
 		if not idx_a < idx_b:
 			# Swap
 			(idx_a, idx_b) = (idx_b, idx_a)
@@ -890,10 +892,9 @@ class JigITT:
 class Co2Jig:
 	__gas_out_delay_ms = 500	# Overpressure avoidance delay
 	__inject_loop_maxtry = 5	# Allow up to 5 gas injections before considering we can't reach the ppm target
-	__valve_min_time_ms = 200	# Minimum opening time for the valve
+	__valve_min_time_ms = 100	# Minimum opening time for the valve
 	__dut_stab_time_ms = 60000	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
 	__dilution_threshold = 1800 # threshold for decide using N2 or fresh air
-	
 	
 	def __init__(self):
 		self.__relayboard = RelayBoard()
@@ -977,7 +978,6 @@ class Co2Jig:
 			elif level > 0:  
 				# Co2 level too high, inject some No2
 				no2_time = itt.getNo2InjectionTime(cur_ppm, target_ppm)
-				#self.injectNO2(no2_time)
 				if(cur_ppm > self.__dilution_threshold):
 					self.injectAir(no2_time)
 				else:
@@ -986,6 +986,7 @@ class Co2Jig:
 
 			cur_ppm = co2meter.read_ppm()
 
+		logger.debug("Injection Time: %d ms" % (((time()) - post_inject_time) * 1000))
 		dut_stab_delay = self.__dut_stab_time_ms - (((time()) - post_inject_time) * 1000)
 		logger.debug("(debug) Wait for DUT ppm stabilization: %d ms" % dut_stab_delay)
 		if dut_stab_delay > 0:
@@ -1018,7 +1019,7 @@ class Co2Jig:
 			itt.loadFromFile()
 			relayboard.powerDutSet(True)
 			logger.info('Duts power-on delay...')
-			sleep(9) # Scale boot time is ~7 seconds
+			sleep(7) # Scale boot time is ~7 seconds
 			dutset.open()
 			relayboard.powerFan(True)
 
@@ -1026,7 +1027,8 @@ class Co2Jig:
 			dutset.sendCmd("timelimit off", 5000)
 			
 			# Disable debug traces
-			dutset.sendCmd("trace off", 5000)
+			#dutset.sendCmd("trace off", 5000)
+			dutset.sendCmd("trace on", 5000)
 			
 			# Send T3 station CO2 commands to get these values after tube gluing
 			dutset.sendCmd("co2 get_tr0_tp0_photo 1", 10000)
@@ -1120,6 +1122,7 @@ class Co2Jig:
 			
 			# Set PASS for duts which are still in "beeing tested" state
 			for dut in dutset.getDuts():
+				dut.sendCmd("trace off")
 				if dut.getPass() == None:
 					dut.setPass(True)
 					
