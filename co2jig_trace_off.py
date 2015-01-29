@@ -1,4 +1,4 @@
-# TODO :
+# TODO : 
 # - Check the ppm target tolerance is matched when testing (ie calibrating boards)
 # - use jig injection calibration table instead of hardcoded injection times
 # - reinject no2 if co2 ppm is to high with respect to the target + tol
@@ -83,8 +83,12 @@ import io
 #	  (avoids waisting time since the DUT will not answer anymore)
 #
 # TODO: log the list of enabled slots
+# 
+# Version 20 (20150129_2000)
+#   - Add air injection, choose 1600ppm as the threshold.
+#   - Fix the bug of calculation of injection time of N2 and air.  
 # Globals
-software_version = "Co2 jig software version 19 (20140106_1700)"
+software_version = "Co2 jig software version 20 (20150129_2000)"
 logger = None
 	
 class Relay:

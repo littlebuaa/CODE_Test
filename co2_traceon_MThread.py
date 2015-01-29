@@ -15,6 +15,8 @@ import re
 import sys
 import csv
 import io
+import threading
+import queue
 
 # Version 1 :
 #   - 1st version, used for NPI
@@ -218,7 +220,11 @@ class CalSettings:
 			CalDot(1600,   100, 0,   1000),
 			CalDot(2800,   100, 0,   1000),
 			CalDot(4600,   200, 0,   1000),
+			#CalDot(1800,   100, 0,   1000),
+			#CalDot(2800,   100, 0,   1000),
+			#CalDot(4600,   200, 0,   1000),
 			
+			#CalDot(850,   100, 0,   1000, 0.20),
 			CalDot(3600,   200, 0,   1000, 0.12),
 			CalDot(2100,   100, 0,   1000, 0.12),
 			CalDot(1100,   100, 0,   1000, 0.15),
@@ -429,7 +435,7 @@ class DutSet:
 			#Dut("slot4", "com104"),
 			Dut("slot5", "com105"),
 			Dut("slot6", "com106"),
-			Dut("slot7", "com107"),
+			#Dut("slot7", "com107"),
 			Dut("slot8", "com108"),
 			#Dut("slot9", "com109"),
 			Dut("slot10", "com110"),
@@ -486,10 +492,9 @@ class DutSet:
 		dut_set_results = list()
 		
 		dut_set_included = [dut for dut in self.__duts if dut not in self.__excluded_duts]
-		
 		for dut in dut_set_included:
 			dut.sendCmd(cmd)
-			
+		#for dut in dut_set_included:
 			try:
 				result = dut.getResult(timeout_ms)
 				logger.info("board <%s>: rc=%d" %
@@ -509,8 +514,49 @@ class DutSet:
 				# for the next cmds.
 				self.excludeDut(dut)
 			dut_set_results.append(DutSetResult(dut, result))
-		
+
 		return dut_set_results
+	
+	def sendCmdMultithreading(self,cmd,timeout_ms):
+		dut_set_included = list()
+		dut_set_results = list()
+		res_queue = list()		
+		dut_set_included = [dut for dut in self.__duts if dut not in self.__excluded_duts]
+		thread_list = []
+		def execute(dut,cmd,timeout_ms,queue):
+			dut.sendCmd(cmd)
+			try:
+				result = dut.getResult(timeout_ms)
+				logger.info("board <%s>: rc=%d" %
+					(dut.getName(), result.rc) )
+				if(result.rc != 0):
+					raise ValueError("board <%s>: rc=%d" %
+					(dut.getName(), result.rc) )
+			except ValueError as e:
+				error_reason = str(e)
+				logger.info("board <%s>: command error (%s)" %
+				(dut.getName(), error_reason))
+				result = None
+				dut.setPass(False, error_reason)
+				self.excludeDut(dut)
+			queue.put(DutSetResult(dut,result))
+		
+		try:
+			for dut in dut_set_included:
+				q = queue.Queue()
+				res_queue.append(q)
+				t = threading.Thread(target = execute,args =(dut,cmd,timeout_ms,q))
+				thread_list.append(t)
+			for t in thread_list:
+				t.start()
+		except:
+			print("Error: unable to start thread")
+		
+		for q in res_queue:
+			dut_set_results.append(q.get())
+			
+		return dut_set_results
+	
 		
 # TODO : this class is not implemented
 # Output example (CR added for convenience) :
@@ -1025,7 +1071,8 @@ class Co2Jig:
 			# Disable timelimit
 			dutset.sendCmd("timelimit off", 5000)
 			
-			#Enable debug traces
+			# Disable debug traces
+			#dutset.sendCmd("trace off", 5000)
 			dutset.sendCmd("trace on", 5000)
 			
 			# Send T3 station CO2 commands to get these values after tube gluing
@@ -1067,8 +1114,9 @@ class Co2Jig:
 					cmd = "co2 calib 100 252 100 252 5 %d %d 0.45 1" % (
 							cal_dot_cnt,
 							ref_ppm)
-					dutset.sendCmd(cmd, 30000)
-
+					#dutset.sendCmd(cmd, 30000)
+					dutset.sendCmdMultithreading(cmd, 30000)
+					
 					cal_dot_cnt += 1
 				else:
 					# Verification : fast
@@ -1077,11 +1125,11 @@ class Co2Jig:
 					cmd = "co2 verif %d %d 1" % (
 							verif_dot_cnt,
 							ref_ppm)
-					cmdRes = dutset.sendCmd(cmd, 30000)
-					
+					#cmdRes = dutset.sendCmd(cmd, 30000)
+					cmdRes = dutset.sendCmdMultithreading(cmd, 30000)
+
 					# Check verification 1 : fast
 					for res in cmdRes:
-
 						# The result is None if the DUT failed to reply correctly to the cmd
 						# Just ignore this DUT in this case (DUT has already been setPass() to False)
 						if res.cmd_result == None:
@@ -1108,10 +1156,8 @@ class Co2Jig:
 									)
 								)
 							# Set DUT as FAILED
-							res.dut.setPass(False, "FAST verification")
-
+							res.dut.setPass(False, "FAST verification")					
 					verif_dot_cnt += 1
-					
 					
 
 			# Read back the calibration tables
@@ -1337,7 +1383,7 @@ def main():
 	if len(argv) < 2:
 		usage()
 
-	init_logger('co2jig.log')
+	init_logger('co2jig_Tuo.log')
 
 	try:
 		logger.info(software_version)
