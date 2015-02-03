@@ -110,10 +110,12 @@ class RelayBoard:
 	relay_gas_co2  = Relay(8, "gas_co2")
 	relay_dut_pwr  = Relay(2, "dut_pwr")
 	relay_pump_pwr = Relay(4, "pump_pwr")
+	relay_gas_air2  = Relay(1, "gas_air2")
 	relay_gas_out  = Relay(1, "gas_out")
 	
 	relays = (	relay_fan_pwr,
-			relay_gas_out,
+			relay_gas_air2,
+			#relay_gas_out,
 			relay_gas_no2,
 			relay_gas_co2,
 			relay_dut_pwr,
@@ -367,8 +369,9 @@ class Dut:
 		#self.__uart.flushInput()
 		# Workaround : the byte should be sent slowly...
 		#self.__uart.write("%s\r" % cmd)
-		for byte in cmd + '\r':
-			self.__uart.write(byte.encode())
+		cmd += '\r'
+		for byte in cmd.encode():
+			self.__uart.write(byte)
 			sleep(0.001)
 	
 	def getResult(self, timeout_ms):
@@ -574,8 +577,8 @@ class Co2Meter:
 
 	def log(self, uart_bytes):
 		# Strip "\n" to avoid "doubled" carriage returns
-		stripped_uart_bytes = uart_bytes.replace('\n', '')
-		self.__logfile.write(stripped_uart_bytes.encode())
+		stripped_uart_bytes = uart_bytes.encode().replace(b'\n', b'')
+		self.__logfile.write(stripped_uart_bytes)
 					
 	def open(self):
 		self.__log_open()
@@ -929,10 +932,13 @@ class Co2Jig:
 		logger.debug("Inject Air for %d ms", time_ms)
 		relayboard = self.__relayboard
 		relay_air_in = relayboard.relay_gas_air
+		relay_air_in2 = relayboard.relay_gas_air2
 		
 		relayboard.enableRelay(relay_air_in)
+		relayboard.enableRelay(relay_air_in2)
 		sleep(time_ms / 1000.0)
 		relayboard.disableRelay(relay_air_in)
+		relayboard.disableRelay(relay_air_in2)
 	
 	def injectNO2(self, time_ms):
 		logger.debug("Inject NO2 for %d ms", time_ms)
@@ -1124,7 +1130,6 @@ class Co2Jig:
 			
 			# Set PASS for duts which are still in "beeing tested" state
 			for dut in dutset.getDuts():
-				dut.sendCmd("trace off")
 				if dut.getPass() == None:
 					dut.setPass(True)
 					
