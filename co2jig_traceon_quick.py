@@ -642,7 +642,10 @@ class Co2Meter:
 		stab_nb_sample = self.__stab_nb_sample if not fast_stab else self.__stab_nb_sample_fast
 		
 		self.__uart.flushInput()
-		logger.debug("Co2Meter RX :")
+		if fast_stab:
+			logger.info("Co2Meter RX Fast:")
+		else:
+			logger.info("Co2Meter RX :")
 		logger.debug("-----------------------------")
 		while True:
 			chunk = self.__uart.read(512)
@@ -663,7 +666,8 @@ class Co2Meter:
 				text = text[measblock.end(0):]
 				
 				if len(co2_ppms) >= stab_nb_sample:
-					last_ppms = co2_ppms[-self.__stab_nb_sample:]
+					#last_ppms = co2_ppms[-self.__stab_nb_sample:]
+					last_ppms = co2_ppms[-stab_nb_sample:]
 					#print last_ppms
 					mean_ppm = sum(last_ppms) / float(len(last_ppms))
 					min_ppm = min(last_ppms)
@@ -684,8 +688,8 @@ class Co2Meter:
 
 			now_time = time()
 			measblock_elapsed_time = (now_time - measblock_time_start) * 1000
-			'''if measblock_elapsed_time > self.__measblock_timeout_ms:
-				raise ValueError('Co2Meter read measure block timeout')'''
+			if measblock_elapsed_time > self.__measblock_timeout_ms:
+				raise ValueError('Co2Meter read measure block timeout')
 			
 			stab_elapsed_time = (now_time - stab_time_start) * 1000
 			#logger.debug("stabilization elapsed time = %d" % stab_elapsed_time)
@@ -986,7 +990,7 @@ class Co2Jig:
 		'''dot: CalDot object
 		   cur_ppm: current co2 ppm level in the jig
 			    This help to co2 measurement time.
-		   Inject gas until the co2 level desribed by the CalDot is reached, or "timeout"'''
+		   Inject gas until the co2 level described by the CalDot is reached, or "timeout"'''
 		co2meter = self.__co2meter
 		itt = self.__itt
 		maxtry = self.__inject_loop_maxtry
@@ -1030,14 +1034,14 @@ class Co2Jig:
 				post_inject_time = time()
 
 			cur_ppm = co2meter.read_ppm()
-
-		logger.debug("Injection Time: %d ms" % (((time()) - post_inject_time) * 1000))
-		dut_stab_delay = self.__dut_stab_time_ms - (((time()) - post_inject_time) * 1000)
+		post_inject = (time()) - post_inject_time
+		logger.debug("Injection Time: %d ms" % (post_inject * 1000))
+		dut_stab_delay = self.__dut_stab_time_ms - post_inject * 1000
 		logger.debug("(debug) Wait for DUT ppm stabilization: %d ms" % dut_stab_delay)
 		if dut_stab_delay > 0:
-			logger.debug("Wait for DUT ppm stabilization: %d ms" % dut_stab_delay)
+			logger.info("Wait for DUT ppm stabilization: %d ms" % dut_stab_delay)
 			sleep(dut_stab_delay / 1000)
-			logger.debug("Wait for DUT ppm stabilization: read co2 ppm after DUT stabilization delay")
+			logger.info("Read co2 ppm after DUT stabilization delay")
 			cur_ppm = co2meter.read_ppm(fast_stab=True)
 		return cur_ppm
 
@@ -1114,8 +1118,7 @@ class Co2Jig:
 					cmd = "co2 calib 100 252 100 252 5 %d %d 0.45 1" % (
 							cal_dot_cnt,
 							ref_ppm)
-					#dutset.sendCmd(cmd, 30000)
-					dutset.sendCmdMultithreading(cmd, 30000)
+					dutset.sendCmd(cmd, 30000)
 					
 					cal_dot_cnt += 1
 				else:
@@ -1125,8 +1128,7 @@ class Co2Jig:
 					cmd = "co2 verif %d %d 1" % (
 							verif_dot_cnt,
 							ref_ppm)
-					#cmdRes = dutset.sendCmd(cmd, 30000)
-					cmdRes = dutset.sendCmdMultithreading(cmd, 30000)
+					cmdRes = dutset.sendCmd(cmd, 30000)
 
 					# Check verification 1 : fast
 					for res in cmdRes:
@@ -1365,7 +1367,7 @@ def init_logger(log_name):
 			    filemode='a')
 	# define a Handler which writes INFO messages or higher to the sys.stderr
 	console = logging.StreamHandler()
-	console.setLevel(logging.DEBUG)
+	console.setLevel(logging.INFO)
 	# set a format which is simpler for console use
 	formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
 	# tell the handler to use this format
@@ -1383,7 +1385,7 @@ def main():
 	if len(argv) < 2:
 		usage()
 
-	init_logger('co2jig_Tuo.log')
+	init_logger('co2jig_Trace_on.log')
 
 	try:
 		logger.info(software_version)
