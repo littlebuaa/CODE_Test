@@ -432,12 +432,12 @@ class DutSet:
 	__all_duts = (	Dut("slot1", "com101"),
 			Dut("slot2", "com102"),
 			Dut("slot3", "com103"),
-			#Dut("slot4", "com104"),
+			Dut("slot4", "com104"),
 			Dut("slot5", "com105"),
 			Dut("slot6", "com106"),
-			#Dut("slot7", "com107"),
+			Dut("slot7", "com107"),
 			Dut("slot8", "com108"),
-			#Dut("slot9", "com109"),
+			Dut("slot9", "com109"),
 			Dut("slot10", "com110"),
 			Dut("slot11", "com111"),
 			Dut("slot12", "com112"),
@@ -727,7 +727,7 @@ class JigITT:
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
 			
 		self.__no2 = list()
-		air_step_ms = no2_step_ms * 3
+		air_step_ms = no2_step_ms
 		logger.debug("In all %d Air Injection times" % self.air_Nb )
 		for index, ppm in enumerate(no2_ppms):
 			if index <= self.air_Nb:
@@ -1192,7 +1192,7 @@ class Co2Jig:
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
 		no2_step_ms = 8000
-		air_step_ms = no2_step_ms * 3
+		air_step_ms = no2_step_ms
 		
 		co2_ppms = list()
 		no2_ppms = list()

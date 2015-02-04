@@ -110,12 +110,12 @@ class RelayBoard:
 	relay_gas_co2  = Relay(8, "gas_co2")
 	relay_dut_pwr  = Relay(2, "dut_pwr")
 	relay_pump_pwr = Relay(4, "pump_pwr")
-	relay_gas_air2  = Relay(1, "gas_air2")
+	#relay_gas_air2  = Relay(1, "gas_air2")
 	relay_gas_out  = Relay(1, "gas_out")
 	
 	relays = (	relay_fan_pwr,
-			relay_gas_air2,
-			#relay_gas_out,
+			#relay_gas_air2,
+			relay_gas_out,
 			relay_gas_no2,
 			relay_gas_co2,
 			relay_dut_pwr,
@@ -370,8 +370,8 @@ class Dut:
 		# Workaround : the byte should be sent slowly...
 		#self.__uart.write("%s\r" % cmd)
 		cmd += '\r'
-		for byte in cmd.encode():
-			self.__uart.write(byte)
+		for byte in cmd:
+			self.__uart.write(byte.encode())
 			sleep(0.001)
 	
 	def getResult(self, timeout_ms):
@@ -433,7 +433,7 @@ class DutSet:
 	__all_duts = (	Dut("slot1", "com101"),
 			Dut("slot2", "com102"),
 			Dut("slot3", "com103"),
-			#Dut("slot4", "com104"),
+			Dut("slot4", "com104"),
 			Dut("slot5", "com105"),
 			Dut("slot6", "com106"),
 			Dut("slot7", "com107"),
@@ -550,7 +550,7 @@ class Co2Meter:
 	__stab_nb_sample_fast = (__sample_rate_hz * 1)	# Last 1 seconds of samples must match the stabilization criteria in fast mode
 	__stab_tol_ratio = (5.0/1000.0)			# last samples must be within +-0.5% of the mean
 	__stab_tol_ppm = 10				# last samples must be within +-10 ppm
-	def __init__(self, uart_name = 'COM100'):
+	def __init__(self, uart_name = 'COM20'):
 		self.__uart = serial.Serial()
 		self.__uart.setPort(uart_name)
 		self.__uart.setBaudrate(9600)
@@ -690,7 +690,8 @@ class JigITT:
 	def loadNo2FromRawMeasures(self, no2_ppms, no2_step_ms):
 			
 		self.__no2 = list()
-		air_step_ms = no2_step_ms * 3
+		#air_step_ms = no2_step_ms * 3
+		air_step_ms = no2_step_ms
 		logger.debug("In all %d Air Injection times" % self.air_Nb )
 		for index, ppm in enumerate(no2_ppms):
 			if index <= self.air_Nb:
@@ -932,13 +933,13 @@ class Co2Jig:
 		logger.debug("Inject Air for %d ms", time_ms)
 		relayboard = self.__relayboard
 		relay_air_in = relayboard.relay_gas_air
-		relay_air_in2 = relayboard.relay_gas_air2
+		#relay_air_in2 = relayboard.relay_gas_air2
 		
 		relayboard.enableRelay(relay_air_in)
-		relayboard.enableRelay(relay_air_in2)
-		sleep(time_ms / 1000.0)
+		#relayboard.enableRelay(relay_air_in2)
+		sleep(time_ms/ 1000.0)
 		relayboard.disableRelay(relay_air_in)
-		relayboard.disableRelay(relay_air_in2)
+		#relayboard.disableRelay(relay_air_in2)
 	
 	def injectNO2(self, time_ms):
 		logger.debug("Inject NO2 for %d ms", time_ms)
@@ -1155,7 +1156,8 @@ class Co2Jig:
 		# Good with 0.06Mpa CO2, 0.4Mpa N2
 		co2_step_ms = 200
 		no2_step_ms = 8000
-		air_step_ms = no2_step_ms * 3
+		#air_step_ms = no2_step_ms * 3
+		air_step_ms = no2_step_ms
 		
 		co2_ppms = list()
 		no2_ppms = list()
