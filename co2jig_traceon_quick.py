@@ -432,7 +432,7 @@ class DutSet:
 	__all_duts = (	Dut("slot1", "com101"),
 			Dut("slot2", "com102"),
 			Dut("slot3", "com103"),
-			Dut("slot4", "com104"),
+			#Dut("slot4", "com104"),
 			Dut("slot5", "com105"),
 			Dut("slot6", "com106"),
 			Dut("slot7", "com107"),

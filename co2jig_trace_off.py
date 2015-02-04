@@ -433,7 +433,7 @@ class DutSet:
 	__all_duts = (	Dut("slot1", "com101"),
 			Dut("slot2", "com102"),
 			Dut("slot3", "com103"),
-			Dut("slot4", "com104"),
+			#Dut("slot4", "com104"),
 			Dut("slot5", "com105"),
 			Dut("slot6", "com106"),
 			Dut("slot7", "com107"),
@@ -550,7 +550,7 @@ class Co2Meter:
 	__stab_nb_sample_fast = (__sample_rate_hz * 1)	# Last 1 seconds of samples must match the stabilization criteria in fast mode
 	__stab_tol_ratio = (5.0/1000.0)			# last samples must be within +-0.5% of the mean
 	__stab_tol_ppm = 10				# last samples must be within +-10 ppm
-	def __init__(self, uart_name = 'COM20'):
+	def __init__(self, uart_name = 'COM100'):
 		self.__uart = serial.Serial()
 		self.__uart.setPort(uart_name)
 		self.__uart.setBaudrate(9600)
@@ -1348,7 +1348,7 @@ def main():
 	if len(argv) < 2:
 		usage()
 
-	init_logger('co2jig.log')
+	init_logger('co2jig_traceoff.log')
 
 	try:
 		logger.info(software_version)
