@@ -15,6 +15,7 @@ import re
 import sys
 import csv
 import io
+import configparser
 import threading
 import queue
 
@@ -86,9 +87,23 @@ import queue
 #
 # TODO: log the list of enabled slots
 # Globals
-software_version = "Co2 jig software version 19 (20140106_1700)"
+software_version = "Co2 jig software TRACE ON version"
 logger = None
-	
+
+def configget(section,key=None):
+	config = configparser.ConfigParser()
+	with open("Config.ini",'r') as cfg:
+		config.readfp(cfg)
+		if key is None:
+			optList =[]
+			for option in config.options(section):
+				optList.append([option,config.get(section,option)])
+			return optList
+		else:
+			value = config.get(section,key)
+			return value
+
+
 class Relay:
 	def __init__(self, id, name):
 		"""Class describing devices connected to the relay board
@@ -125,8 +140,7 @@ class RelayBoard:
 			if len(dev_list) != 1:
 				# Found none or more than 1 device matching...
 				raise ValueError('Found %d relay board(s)' % len(dev_list))
-			ftdi_sn = bytes.decode(dev_list[0][2]) 
-			# or "ftdi_sn = dev_list[0][2].decode()" 
+			ftdi_sn = dev_list[0][2].decode()
 			
 		logger.info("Open relayboard device S/N <%s>" % ftdi_sn)
 		self.__ftdi = pylibftdi.BitBangDevice(ftdi_sn)
@@ -429,27 +443,14 @@ class DutSetResult:
 		self.cmd_result = cmd_result
 		
 class DutSet:
-	__all_duts = (	Dut("slot1", "com101"),
-			Dut("slot2", "com102"),
-			Dut("slot3", "com103"),
-			#Dut("slot4", "com104"),
-			Dut("slot5", "com105"),
-			Dut("slot6", "com106"),
-			Dut("slot7", "com107"),
-			Dut("slot8", "com108"),
-			Dut("slot9", "com109"),
-			Dut("slot10", "com110"),
-			Dut("slot11", "com111"),
-			Dut("slot12", "com112"),
-			Dut("slot13", "com113"),
-			Dut("slot14", "com114"),
-			Dut("slot15", "com115"),
-			Dut("slot16", "com116")
-		)
-		
 	__excluded_duts = list()
 	
 	def __init__(self, nb_slots):
+		duts = []
+		namelist = configget('Dut')
+		for item in namelist:
+			duts.append(Dut(item[0],item[1]))
+		self.__all_duts = tuple(duts)
 		self.__duts = self.__all_duts[0:nb_slots]
 	
 	def open(self):
@@ -580,14 +581,15 @@ class DutSet:
 # </li840>
 class Co2Meter:
 	#__uart
-	__measblock_timeout_ms = 2000			# Timeout to get a measure block
-	__stab_timeout_ms = 40000			# Timeout for co2 ppm stabilization
-	__sample_rate_hz = 2				# co2meter sends 2 samples per second
+	__measblock_timeout_ms = int(configget('CO2Meter','measblock_timeout_ms'))			# Timeout to get a measure block
+	__stab_timeout_ms = int(configget('CO2Meter','stab_timeout_ms'))			# Timeout for co2 ppm stabilization
+	__sample_rate_hz = int(configget('CO2Meter','sample_rate_hz'))				# co2meter sends 2 samples per second
 	__stab_nb_sample = (__sample_rate_hz * 7)	# Last 7 seconds of samples must match the stabilization criteria
 	__stab_nb_sample_fast = (__sample_rate_hz * 1)	# Last 1 seconds of samples must match the stabilization criteria in fast mode
-	__stab_tol_ratio = (5.0/1000.0)			# last samples must be within +-0.5% of the mean
-	__stab_tol_ppm = 10				# last samples must be within +-10 ppm
-	def __init__(self, uart_name = 'COM100'):
+	__stab_tol_ratio = float(configget('CO2Meter','stab_tol_ratio'))			# last samples must be within +-0.5% of the mean
+	__stab_tol_ppm = int(configget('CO2Meter','stab_tol_ppm'))			# last samples must be within +-10 ppm
+
+	def __init__(self, uart_name = configget('CO2Meter','port')):
 		self.__uart = serial.Serial()
 		self.__uart.setPort(uart_name)
 		self.__uart.setBaudrate(9600)
@@ -939,11 +941,11 @@ class JigITT:
 	
 				
 class Co2Jig:
-	__gas_out_delay_ms = 500	# Overpressure avoidance delay
-	__inject_loop_maxtry = 5	# Allow up to 5 gas injections before considering we can't reach the ppm target
-	__valve_min_time_ms = 100	# Minimum opening time for the valve
-	__dut_stab_time_ms = 60000	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
-	__dilution_threshold = 1600 # threshold for decide using N2 or fresh air
+	__gas_out_delay_ms = int(configget('Co2Jig','gas_out_delay_ms'))	# Overpressure avoidance delay
+	__inject_loop_maxtry = int(configget('Co2Jig','inject_loop_maxtry'))	# Allow up to 5 gas injections before considering we can't reach the ppm target
+	__valve_min_time_ms = int(configget('Co2Jig','valve_min_time_ms'))	# Minimum opening time for the valve
+	__dut_stab_time_ms = int(configget('Co2Jig','dut_stab_time_ms'))	# Minimum time to wait after gas injection so that the gas concentration is stabilized inside dut sensor
+	__dilution_threshold = int(configget('Co2Jig','dilution_threshold')) # threshold for decide using N2 or fresh air
 	
 	def __init__(self):
 		self.__relayboard = RelayBoard()
